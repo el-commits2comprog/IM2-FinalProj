@@ -15,8 +15,8 @@ if (!csrf_verify()) {
 }
 
 $fullName = register_clean_name(register_input('full_name'));
-$studentNumber = strtoupper(trim(register_input('student_number')));
-$email = strtolower(trim(register_input('email')));
+$studentNumber = trim(register_input('student_number'));
+$email = normalize_email(register_input('email'));
 $password = register_input('password');
 $confirm = register_input('password_confirm');
 
@@ -32,12 +32,12 @@ if (!preg_match("/^[\p{L}][\p{L}\s.'-]{1,99}$/u", $fullName)) {
     $errors[] = 'Enter your full name using letters, spaces, hyphens, or apostrophes.';
 }
 
-if (!preg_match('/^\d{4}-\d{5}$/', $studentNumber)) {
-    $errors[] = 'Student number must look like 2023-10421 (year, a hyphen, then 5 digits).';
+if (!is_valid_student_number($studentNumber)) {
+    $errors[] = 'Use the format YYYY-NN-NNNNN, such as ' . STUDENT_NUMBER_EXAMPLE . '.';
 }
 
-if (strlen($email) > 100 || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    $errors[] = 'Enter a valid email address.';
+if (!is_allowed_email_domain($email)) {
+    $errors[] = 'Only @bicol-u.edu.ph email addresses can register.';
 }
 
 if (strlen($password) < 8) {

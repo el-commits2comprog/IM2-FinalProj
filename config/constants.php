@@ -55,6 +55,10 @@ define('ROLE_STUDENT', 'Student');
 define('USER_STATUS_ACTIVE', 'Active');
 define('USER_STATUS_INACTIVE', 'Inactive');
 
+define('STUDENT_NUMBER_PATTERN', '/^\d{4}-\d{2}-\d{5}$/');
+define('STUDENT_NUMBER_EXAMPLE', '2024-01-12345');
+define('ALLOWED_EMAIL_DOMAIN', 'bicol-u.edu.ph');
+
 // PROPOSED by M1, team must confirm before M2/M3 start; these must match the ENUM values in the SQL files exactly.
 define('ITEM_TYPE_LOST', 'Lost');
 define('ITEM_TYPE_FOUND', 'Found');
@@ -70,6 +74,41 @@ define('ITEM_STATUS_RETURNED', 'Returned');
 define('CLAIM_STATUS_PENDING', 'Pending');
 define('CLAIM_STATUS_APPROVED', 'Approved');
 define('CLAIM_STATUS_REJECTED', 'Rejected');
+
+function normalize_email(string $email): string
+{
+    return strtolower(trim($email));
+}
+
+function is_valid_student_number(string $value): bool
+{
+    $value = trim($value);
+
+    if ($value === '' || !preg_match(STUDENT_NUMBER_PATTERN, $value)) {
+        return false;
+    }
+
+    $year = (int) substr($value, 0, 4);
+    return $year >= 2000 && $year <= (int) date('Y');
+}
+
+function is_allowed_email_domain(string $email): bool
+{
+    $normalized = normalize_email($email);
+
+    if (!filter_var($normalized, FILTER_VALIDATE_EMAIL)) {
+        return false;
+    }
+
+    $at = strrpos($normalized, '@');
+
+    if ($at === false) {
+        return false;
+    }
+
+    $domain = substr($normalized, $at + 1);
+    return $domain === ALLOWED_EMAIL_DOMAIN;
+}
 
 /**
  * Public URL for a file under public/.

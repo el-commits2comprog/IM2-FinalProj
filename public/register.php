@@ -46,13 +46,14 @@ require __DIR__ . '/includes/navbar.php';
                     id="student_number"
                     name="student_number"
                     value="<?= e(old('student_number')) ?>"
-                    maxlength="20"
+                    maxlength="13"
+                    pattern="^\d{4}-\d{2}-\d{5}$"
                     inputmode="numeric"
-                    placeholder="2023-10421"
+                    placeholder="<?= e(STUDENT_NUMBER_EXAMPLE) ?>"
                     autocomplete="off"
                     required
                 >
-                <p class="help">Use the form year-number, such as 2023-10421.</p>
+                <p class="help">Use the format YYYY-NN-NNNNN.</p>
             </div>
             <div class="form-group">
                 <label for="email">Email</label>
@@ -63,9 +64,11 @@ require __DIR__ . '/includes/navbar.php';
                     name="email"
                     value="<?= e(old('email')) ?>"
                     maxlength="100"
+                    placeholder="name@bicol-u.edu.ph"
                     autocomplete="email"
                     required
                 >
+                <p class="help">Use your @bicol-u.edu.ph email.</p>
             </div>
             <div class="form-group">
                 <label for="password">Password</label>

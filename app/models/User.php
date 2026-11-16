@@ -46,6 +46,8 @@ function user_find_by_id(int $id): ?array
  */
 function user_find_by_email(string $email): ?array
 {
+    $email = normalize_email($email);
+
     $stmt = db()->prepare(
         'SELECT user_id, student_number, full_name, email, password_hash, role, status, created_at, updated_at
          FROM users
@@ -81,6 +83,7 @@ function user_find_by_student_number(string $studentNumber): ?array
 
 function user_email_exists(string $email, ?int $exceptId = null): bool
 {
+    $email = normalize_email($email);
     $sql = 'SELECT user_id FROM users WHERE email = :email';
     $params = ['email' => $email];
 
@@ -111,6 +114,10 @@ function user_create(array $data): int
     $studentNumber = $data['student_number'] ?? null;
     if ($studentNumber === '') {
         $studentNumber = null;
+    }
+
+    if (array_key_exists('email', $data)) {
+        $data['email'] = normalize_email((string) $data['email']);
     }
 
     $role = $data['role'] ?? ROLE_STUDENT;
@@ -146,6 +153,10 @@ function user_create(array $data): int
  */
 function user_update(int $id, array $data): bool
 {
+    if (array_key_exists('email', $data)) {
+        $data['email'] = normalize_email((string) $data['email']);
+    }
+
     $allowed = ['student_number', 'full_name', 'email', 'password_hash', 'role', 'status'];
     $sets = [];
     $params = ['user_id' => $id];

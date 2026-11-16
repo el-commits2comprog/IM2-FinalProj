@@ -17,7 +17,7 @@ if (!csrf_verify()) {
     redirect(url('login.php'));
 }
 
-$email = strtolower(trim(login_input('email')));
+$email = normalize_email(login_input('email'));
 $password = login_input('password');
 
 if (login_is_locked()) {
@@ -26,20 +26,15 @@ if (login_is_locked()) {
     redirect(url('login.php'));
 }
 
-$errors = [];
+if (!filter_var($email, FILTER_VALIDATE_EMAIL) || !is_allowed_email_domain($email) || $password === '') {
+    login_note_failure();
 
-if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    $errors[] = 'Enter a valid email address.';
-}
-
-if ($password === '') {
-    $errors[] = 'Password is required.';
-}
-
-if ($errors !== []) {
-    foreach ($errors as $error) {
-        flash_set('error', $error);
+    if (login_is_locked()) {
+        flash_set('error', 'Too many attempts. Please wait ' . LOGIN_LOCK_SECONDS . ' seconds and try again.');
+    } else {
+        flash_set('error', 'Invalid email or password.');
     }
+
     flash_old(['email' => $email]);
     redirect(url('login.php'));
 }

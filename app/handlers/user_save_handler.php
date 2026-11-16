@@ -30,8 +30,8 @@ if ($action !== 'save') {
 }
 
 $fullName = user_save_clean_name(user_save_input('full_name'));
-$studentNumber = strtoupper(trim(user_save_input('student_number')));
-$email = strtolower(trim(user_save_input('email')));
+$studentNumber = trim(user_save_input('student_number'));
+$email = normalize_email(user_save_input('email'));
 $role = user_save_input('role');
 $status = user_save_input('status');
 $password = user_save_raw('password');
@@ -73,12 +73,12 @@ if ($studentNumber === '') {
     if ($role === ROLE_STUDENT) {
         $errors[] = 'Students need a student number.';
     }
-} elseif (!preg_match('/^\d{4}-\d{5}$/', $studentNumber)) {
-    $errors[] = 'Student number must look like 2023-10421 (year, a hyphen, then 5 digits).';
+} elseif (!is_valid_student_number($studentNumber)) {
+    $errors[] = 'Use the format YYYY-NN-NNNNN, such as ' . STUDENT_NUMBER_EXAMPLE . '.';
 }
 
-if (strlen($email) > 100 || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    $errors[] = 'Enter a valid email address.';
+if (!is_allowed_email_domain($email)) {
+    $errors[] = 'Only @bicol-u.edu.ph email addresses can register.';
 }
 
 $wantsPassword = $password !== '' || $confirm !== '';

@@ -1,5 +1,5 @@
 -- ByteBack [M1] users
--- Spellings must match config/constants.php (ROLE_* and USER_STATUS_*).
+-- Spellings must match config/constants.php (ROLE_*, USER_STATUS_*, STUDENT_NUMBER_PATTERN, ALLOWED_EMAIL_DOMAIN).
 --
 -- Sample login (every account uses the same password):
 --   Admin    maria.lourdes.santos@bicol-u.edu.ph    Password123!
@@ -9,6 +9,7 @@
 --
 -- Hashes were generated with:
 --   php -r "echo password_hash('Password123!', PASSWORD_DEFAULT);"
+-- Student numbers use the M1 format YYYY-NN-NNNNN, with admin rows left as NULL.
 -- Rows are inserted out of alphabetical order on purpose (see queries/q1).
 
 SET NAMES utf8mb4;
@@ -34,6 +35,13 @@ CREATE TABLE users (
 
 INSERT INTO users (student_number, full_name, email, password_hash, role, status) VALUES
   (NULL, 'Maria Lourdes Santos', 'maria.lourdes.santos@bicol-u.edu.ph', '$2y$10$SxJdWnQsFCSj/scNQGhssO3EQhrjkeERtA0ItNChQG2LlgqBwvFvG', 'Admin', 'Active'),
-  ('2021-11842', 'Rafael Cruz', 'rafael.cruz@bicol-u.edu.ph', '$2y$10$uXYGGI1yeKBLta/9Fj9xrOwBslMJBvz09pxuqPe5Ex7piAm8wUz7u', 'Student', 'Active'),
-  ('2023-10421', 'Ana Villanueva', 'ana.villanueva@bicol-u.edu.ph', '$2y$10$6OqGBhwQXt9TAjTpLyWF7Oc2ifbH8G.s3Yne6YBpgcQi3f7cmjAL6', 'Student', 'Active'),
-  ('2022-13007', 'Jose Mendoza', 'jose.mendoza@bicol-u.edu.ph', '$2y$10$HWaVu9VucJWVXsRnzWvrYOEmk10sba0YCGrt9KNLwBLxH.GA9ZuKe', 'Student', 'Active');
+  ('2021-01-11842', 'Rafael Cruz', 'rafael.cruz@bicol-u.edu.ph', '$2y$10$uXYGGI1yeKBLta/9Fj9xrOwBslMJBvz09pxuqPe5Ex7piAm8wUz7u', 'Student', 'Active'),
+  ('2023-02-10421', 'Ana Villanueva', 'ana.villanueva@bicol-u.edu.ph', '$2y$10$6OqGBhwQXt9TAjTpLyWF7Oc2ifbH8G.s3Yne6YBpgcQi3f7cmjAL6', 'Student', 'Active'),
+  ('2025-01-00988', 'Jose Mendoza', 'jose.mendoza@bicol-u.edu.ph', '$2y$10$HWaVu9VucJWVXsRnzWvrYOEmk10sba0YCGrt9KNLwBLxH.GA9ZuKe', 'Student', 'Active');
+
+-- Legacy sample rows from the old format can be migrated to the new format once locally.
+-- UPDATE users SET student_number = '2021-01-11842' WHERE student_number = '2021-11842';
+-- UPDATE users SET student_number = '2023-02-10421' WHERE student_number = '2023-10421';
+-- UPDATE users SET student_number = '2025-01-00988' WHERE student_number = '2025-00988';
+--
+-- Older rows with emails outside the @bicol-u.edu.ph domain can no longer log in and should be updated to the approved campus domain.

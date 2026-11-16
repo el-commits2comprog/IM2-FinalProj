@@ -34,9 +34,11 @@ require __DIR__ . '/includes/navbar.php';
                     name="email"
                     value="<?= e(old('email')) ?>"
                     maxlength="100"
+                    placeholder="name@bicol-u.edu.ph"
                     autocomplete="username"
                     required
                 >
+                <p class="help">Use your @bicol-u.edu.ph email.</p>
             </div>
             <div class="form-group">
                 <label for="password">Password</label>
