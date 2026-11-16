@@ -1,0 +1,13 @@
+# Local database credentials. Copy config.sample.php to config.php.
+config/config.php
+
+# Uploaded item photos and claim proof. Keep the folder markers.
+uploads/*
+!uploads/.gitkeep
+!uploads/.htaccess
+
+logs/
+
+.DS_Store
+.idea/
+.vscode/
