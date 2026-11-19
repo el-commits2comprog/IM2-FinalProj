@@ -87,8 +87,21 @@ if ($user === null) {
                 <?php endforeach; ?>
                 <?php if ($user !== null): ?>
                     <li>
-                        <a class="nav-logout" href="<?= e(url('logout.php')) ?>">Log out</a>
+                        <a class="nav-logout" href="<?= e(url('logout.php')) ?>" id="logout-link">Log out</a>
                     </li>
+
+                    <dialog id="logout-dialog" class="confirm-dialog">
+                        <form method="dialog">
+                            <button type="submit" value="cancel" class="confirm-close" aria-label="Close">&times;</button>
+                            <h2>Log out?</h2>
+                            <p>Are you sure you want to log out?</p>
+                            <div class="confirm-actions">
+                                <button value="cancel" class="btn">Cancel</button>
+                                <a class="btn btn-danger" href="<?= e(url('logout.php')) ?>">Log out</a>
+                            </div>
+                        </form>   
+                    </dialog>
+                    
                 <?php endif; ?>
             </ul>
         </nav>

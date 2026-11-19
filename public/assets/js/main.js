@@ -17,6 +17,11 @@
         });
     });
 
+    document.getElementById('logout-link').addEventListener('click', function (e) {
+        e.preventDefault();
+        document.getElementById('logout-dialog').showModal();
+    });
+
     document.addEventListener("click", function (event) {
         var link = event.target.closest("a[data-confirm]");
 
