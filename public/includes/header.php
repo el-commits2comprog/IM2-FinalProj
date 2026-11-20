@@ -18,6 +18,7 @@ $extraCss = $extra_css ?? [];
     <link rel="stylesheet" href="<?= e(url('assets/css/style.css')) ?>">
     <?php foreach ($extraCss as $href): ?>
         <link rel="stylesheet" href="<?= e((string) $href) ?>">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <?php endforeach; ?>
 </head>
 <body>

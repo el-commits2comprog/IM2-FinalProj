@@ -15,8 +15,7 @@ CREATE TABLE locations (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT INTO categories (category_name) VALUES
-    ('Electronics'), ('Clothing'), ('Books'), ('IDs & Cards'), ('Bags'), ('Keys'), ('Other');
+    ('Electronics'), ('Bags & Wallets'), ('Clothing & Accessories'), ('School Supplies'), ('IDs & Cards'), ('Personal Items'), ('Sports Equipment'), ('Documents'), ('Keys & Keychains'), ('Other');
 
 INSERT INTO locations (location_name) VALUES
-    ('Library'), ('CS Canteen'), ('CENG Gymnasium'), ('BU Commencement Grounds'), ('BU Oval'), ('Other');
-
+    ('BU Oval'), ('BU Commencement Grounds'), ('CS Canteen'), ('BU Library'), ('BU Daraga Campus'), ('BU East Campus'), ('BU West (Main Campus)'), ('Admissions Office'), ('BU OSAS'), ('BU Chapel'), ('BUHS'), ('Guinobatan Campus'), ('Tabaco Campus'), ('Polangui Campus'), ('Gubat Campus'), ('Ligao Campus'), ('Other');

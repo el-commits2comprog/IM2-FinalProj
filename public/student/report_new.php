@@ -1,8 +1,9 @@
 <?php
-
+// [M2] Item report form (for students).
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../app/auth/guard.php';
+require_once __DIR__ . '/../../app/handlers/item_submit_handler.php';
 
 if (!is_logged_in()) {
     header('Location: ' . url('login.php'));
@@ -34,21 +35,10 @@ $categories = $pdo->query(
 )->fetchAll();
 $categoryIds = array_map('intval', array_column($categories, 'category_id'));
 
-$locationNames = $pdo->query(
-    "SELECT location_name FROM locations WHERE location_name <> 'Other' ORDER BY location_name"
-)->fetchAll(PDO::FETCH_COLUMN);
-
-function find_or_create_location(PDO $pdo, string $name): int
-{
-    $find = $pdo->prepare('SELECT location_id FROM locations WHERE location_name = :name LIMIT 1');
-    $find->execute([':name' => $name]);
-    $id = $find->fetchColumn();
-    if ($id !== false) {
-        return (int)$id;
-    }
-    $pdo->prepare('INSERT INTO locations (location_name) VALUES (:name)')->execute([':name' => $name]);
-    return (int)$pdo->lastInsertId();
-}
+$locations = $pdo->query(
+    "SELECT location_id, location_name FROM locations ORDER BY location_name"
+)->fetchAll();
+$locationIds = array_map('intval', array_column($locations, 'location_id'));
 
 $errors = [];
 $old = [
@@ -56,6 +46,7 @@ $old = [
     'item_name'   => '',
     'category_id' => '',
     'location_id' => '',
+    'custom_location' => '',
     'event_date'  => '',
     'description' => '',
 ];
@@ -78,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (!hash_equals($_SESSION['csrf'], (string)($_POST['csrf'] ?? ''))) {
-        $errors[] = 'Your session expired. Please try again.';
+        $errors['form'] = 'Your session expired. Please try again.';
     }
     if (!in_array($old['item_type'], ['Lost', 'Found'], true)) {
         $errors['item_type'] = 'Choose Lost or Found.';
@@ -86,19 +77,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($old['item_name'] === '' || mb_strlen($old['item_name']) > 100) {
         $errors['item_name'] = 'Item name is required (max 100 characters).';
     }
-    if (!in_array((int)$old['category_id'], array_column($categories, 'category_id'), true)) {
+    if (!in_array((int)$old['category_id'], ($categoryIds), true)) {
         $errors['category_id'] = 'Choose a category.';
     }
-    if (mb_strlen($old['location_name']) < 2 || mb_strlen($old['location_name']) > 100) {
-        $errors['location_name'] = 'Enter the location where it was lost or found (2 to 100 characters).';
+
+    $locationId = (int)$old['location_id'];
+    if (!in_array($locationId, $locationIds, true)) {
+        $errors['location_id'] = 'Choose a location.';
     }
 
-    $newLocation = '';
-    if ($otherLocationId !== 0 && (int)$old['location_id'] === $otherLocationId) {
-        $newLocation = preg_replace('/\s+/', ' ', $old['other_location']);
-        if ($newLocation === '' || mb_strlen($newLocation) > 100) {
-            $errors['other_location'] = 'Enter the location name (max 100 characters).';
-        }
+    $customLocation = preg_replace('/\s+/', ' ', $old['custom_location']);
+    if (mb_strlen($customLocation) > 100) {
+        $errors['custom_location'] = 'Specific location must be 100 characters or fewer.';
+    }
+    if ($customLocation === '') {
+        $customLocation = null; 
+    }
+
+    $locationError = validate_custom_location($locations, $old);
+    if ($locationError !== null) {
+        $errors['custom_location'] = $locationError;
     }
 
     $date = DateTime::createFromFormat('Y-m-d', $old['event_date']);
@@ -137,7 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         try {
             if ($photoTmp !== null) {
-                $uploadDir = __DIR__ . '/../uploads';
+                $uploadDir = __DIR__ . '/../../uploads';
                 if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true)) {
                     throw new RuntimeException('Could not create the uploads folder.');
                 }
@@ -151,23 +149,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $stmt = $pdo->prepare(
                 'INSERT INTO items
-                    (user_id, item_type, item_name, category_id, location_id, event_date, photo_path, description, status)
+                    (user_id, item_type, item_name, category_id, location_id, custom_location, event_date, photo_path, description, status)
                 VALUES
-                    (:user_id, :item_type, :item_name, :category_id, :location_id, :event_date, :photo_path, :description, :status)'
+                    (:user_id, :item_type, :item_name, :category_id, :location_id, :custom_location, :event_date, :photo_path, :description, :status)'
             );
             $stmt->execute([
                 ':user_id'     => (int)($user['user_id'] ?? $user['id']),
                 ':item_type'   => $old['item_type'],
                 ':item_name'   => $old['item_name'],
                 ':category_id' => (int)$old['category_id'],
-                ':location_id' => (int)$old['location_id'],
+                ':location_id' => $locationId,
+                ':custom_location' => $customLocation,
                 ':event_date'  => $old['event_date'],
                 ':photo_path'  => $photoPath,
                 ':description' => $old['description'],
                 ':status'      => 'Pending',
             ]);
 
-            $pdo->commit();
             unset($_SESSION['csrf']);
             flash_set('success', 'Report submitted. An admin will review it.'); 
             header('Location: ' . url('student/my_reports.php'));
@@ -187,12 +185,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $page_title = 'Report Item';
 $active_nav = 'report';
+$extra_css  = [url('assets/css/items.css')];
+$extra_js   = [url('assets/js/items.js')];
 
 require __DIR__ . '/../includes/header.php';
 require __DIR__ . '/../includes/navbar.php';
 ?>
 <main id="main" class="container">
-    <section class="card">
+    <section class="card report-form-section">
         <h1>Report an item</h1>
         <p class="muted">Your report will be reviewed by an admin before it appears in the feed.</p>
 
@@ -218,31 +218,39 @@ require __DIR__ . '/../includes/navbar.php';
                 <?php if (isset($errors['item_name'])): ?><span class="form-error"><?= e($errors['item_name']) ?></span><?php endif; ?>
             </div>
 
-            <div class="field-row">
-                <div class="field">
-                    <label for="location_name">Location</label>
-                    <input id="location_name" name="location_name" maxlength="100"
-                    list="location-suggestions" autocomplete="off"
-                    placeholder="Enter location, e.g. Library">
-                    <datalist id="location-suggestions">
-                        <?php foreach ($locationNames as $name): ?>
-                            <option value="<?= e($name) ?>"></option>
-                            <?php endforeach; ?>
-                        </datalist>
-                        <?php if (isset($errors['location_name'])): ?><span class="form-error"><?= e($errors['location_name']) ?></span><?php endif; ?>
-                        </div>
+            <div class="field">
+                <label for="location_id">Location</label>
+                <select id="location_id" name="location_id" required>
+                    <option value="">Select location</option>
+                    <?php foreach ($locations as $l): ?>
+                        <option value="<?= (int)$l['location_id'] ?>"
+                            data-other="<?= $l['location_name'] === 'Other' ? '1' : '0' ?>"
+                            <?= (string)$l['location_id'] === $old['location_id'] ? 'selected' : '' ?>>
+                            <?= e($l['location_name']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <?php if (isset($errors['location_id'])): ?>
+                    <span class="form-error"><?= e($errors['location_id']) ?></span>
+                <?php endif; ?>
+
+                <input id="custom_location" name="custom_location" maxlength="100"
+                    placeholder="Specific spot (optional), e.g. 2nd floor hallway"
+                    value="<?= e($old['custom_location']) ?>">
+                <?php if (isset($errors['custom_location'])): ?>
+                    <span class="form-error"><?= e($errors['custom_location']) ?></span>
+                <?php endif; ?>
+            </div>
                     
-                    <div class="field">
-                        <label for="category_id">Category</label>
-                        <select id="category_id" name="category_id" required>
-                            <option value="">Select category</option>
-                            <?php foreach ($categories as $c): ?>
-                                <option value="<?= (int)$c['category_id'] ?>" <?= (string)$c['category_id'] === $old['category_id'] ? 'selected' : '' ?>><?= e($c['category_name']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                        <?php if (isset($errors['category_id'])): ?><span class="form-error"><?= e($errors['category_id']) ?></span><?php endif; ?>
-                    </div>
-                </div>
+            <div class="field">
+                <label for="category_id">Category</label>
+                <select id="category_id" name="category_id" required>
+                    <option value="">Select category</option>
+                    <?php foreach ($categories as $c): ?>
+                        <option value="<?= (int)$c['category_id'] ?>" <?= (string)$c['category_id'] === $old['category_id'] ? 'selected' : '' ?>><?= e($c['category_name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <?php if (isset($errors['category_id'])): ?><span class="form-error"><?= e($errors['category_id']) ?></span><?php endif; ?>
             </div>
 
             <div class="field">
@@ -265,11 +273,47 @@ require __DIR__ . '/../includes/navbar.php';
                 <?php if (isset($errors['photo'])): ?><span class="form-error"><?= e($errors['photo']) ?></span><?php endif; ?>
             </div>
 
-            <div class="form-actions">
-                <a class="btn" href="<?= e(url('index.php')) ?>">Cancel</a>
-                <button type="submit" class="btn btn-primary">Submit report</button>
+            <div class="important-notice">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <p>
+                    <strong>Important:</strong> Found items must be handed over to the school Lost and Found Office. 
+                    Please turn in the item as soon as possible after submitting this report. 
+                    Do not give it directly to the person who lost it.
+                </p>
             </div>
+            <button type="button" class="btn btn-outline" id="previewReport">
+                Preview Report
+            </button>
+
+            <div class="form-actions">
+                <a class="btn" href="<?= e(url('./index.php')) ?>">Cancel</a>
+                <button type="button" class="btn btn-primary" id="open-confirm">
+                    Submit report
+                </button>
+            </div>
+
         </form>
+        <dialog id="confirm-dialog" class="confirm-dialog">
+            <form method="dialog">
+                <button type="submit" value="cancel" class="confirm-close" aria-label="Close">&times;</button>
+
+                <h2>Submit Report</h2>
+                <p>Are you sure you want to submit this <span id="confirm-type">item</span> item report?</p>
+
+                <div class="confirm-actions">
+                    <button type="submit" value="cancel" class="btn">Cancel</button>
+                    <button type="button" id="confirm-submit" class="btn btn-primary">
+                        Submit
+                    </button>
+                </div>
+            </form>
+        </dialog>
     </section>
+    <div id="previewModal" class="item-modal" hidden>
+    <div class="item-modal-content">
+            <button type="button" id="closePreviewModal" class="item-modal-close">&times;</button>
+            <div id="previewModalBody"></div>
+        </div>
+    </div>
 </main>
 <?php require __DIR__ . '/../includes/footer.php'; ?>
