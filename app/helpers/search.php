@@ -3,14 +3,30 @@
 declare(strict_types=1);
 
 const SEARCH_SYNONYMS = [
+
     ['phone', 'cellphone', 'mobile', 'smartphone'],
-    ['wallet', 'purse', 'billfold'],
-    ['id', 'identification', 'card'],
-    ['umbrella', 'brolly'],
-    ['bag', 'backpack', 'knapsack'],
-    ['jacket', 'coat', 'windbreaker', 'hoodie'],
+    ['laptop', 'computer'],
+    ['earphones', 'earbuds', 'headphones', 'headset'],
+    ['charger', 'charging cable', 'adapter', 'phone charger', 'USB cable', 'cord'],
+
+    ['wallet', 'purse', 'handbag', 'pouch'],
+    ['id', 'identification', 'card', 'school id'],
+    ['bag', 'backpack', 'knapsack', 'purse', 'sling bag', 'handbag', 'shoulder bag'],
     ['key', 'keys', 'keychain'],
+    
+    ['jacket', 'coat', 'hoodie', 'windbreaker'],
+    ['shirt', 't-shirt', 'tee'],
+    ['shoes', 'sneakers', 'footwear'],
+
+    ['notebook', 'notepad', 'journal', 'binder'],
+    ['pen', 'ballpoint', 'marker'],
+    ['pencil', 'mechanical pencil'],
     ['calculator', 'calc'],
+
+    ['umbrella', 'brolly'],
+    ['water bottle', 'tumbler', 'flask'],
+    ['glasses', 'eyeglasses', 'spectacles'],
+
 ];
 
 const SEARCH_STOPWORDS = ['a', 'an', 'the', 'of', 'my', 'and', 'or', 'in', 'on', 'with'];

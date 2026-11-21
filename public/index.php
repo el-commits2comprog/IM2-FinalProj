@@ -1,11 +1,12 @@
 <?php
-
+// [M2] Student feed: lists approved Lost/Found reports with search and filter
 declare(strict_types=1);
 
 require_once __DIR__ . '/../app/auth/guard.php';    
 require_once __DIR__ . '/../app/models/Item.php';
 require_once __DIR__ . '/../app/models/Category.php';
 require_once __DIR__ . '/../app/models/Location.php';  
+require_once __DIR__ . '/../app/helpers/search.php';
 
 if (!is_logged_in()) {
     header('Location: ' . url('login.php'));
@@ -32,11 +33,37 @@ $pdo = new PDO(
     ]
 );
 
+function item_search_clause(string $q, array &$params): string
+{
+    $columns = ['i.item_name', 'i.description', 'i.custom_location', 'l.location_name', 'c.category_name'];
+    $groups  = [];
+
+    foreach (search_keywords($q) as $i => $word) {
+        $terms = [];
+        foreach (search_expand($word) as $j => $term) {
+            $p = ":kw{$i}_{$j}";
+            $params[$p] = search_like($term);
+            $cols = array_map(static fn($c) => "$c LIKE $p", $columns);
+            $terms[] = '(' . implode(' OR ', $cols) . ')';
+        }
+        $groups[] = '(' . implode(' OR ', $terms) . ')';
+    }
+
+    return $groups ? ' AND ' . implode(' AND ', $groups) : '';
+}
+
 $type = $_GET['type'] ?? 'all';
 if (!in_array($type, ['all', 'found', 'lost'], true)) {
     $type = 'all';
 }
 $q = trim((string)($_GET['q'] ?? ''));
+$categoryId = (int)($_GET['category'] ?? 0);
+$locationId = (int)($_GET['location'] ?? 0);
+
+$categories = category_all($pdo);
+$locations  = location_all($pdo);
+
+$isFiltered = ($type !== 'all' || $q !== '' || $categoryId > 0 || $locationId > 0);
 
 $sql = "
     SELECT i.item_id    AS id,
@@ -60,18 +87,6 @@ $sql = "
 ";
 $params = [];
 
-$categoryId = (int)($_GET['category'] ?? 0);
-$locationId = (int)($_GET['location'] ?? 0);
-
-$categories = category_all($pdo);
-$locations  = location_all($pdo);
-$items = item_feed($pdo, [
-    'q' => $q, 'type' => ucfirst($type),
-    'category_id' => $categoryId, 'location_id' => $locationId,
-]);
-
-$isFiltered = ($type !== 'all' || $q !== '' || $categoryId > 0 || $locationId > 0);
-
 if ($categoryId > 0) {
     $sql .= " AND i.category_id = :cat";
     $params[':cat'] = $categoryId;
@@ -86,14 +101,12 @@ if ($type !== 'all') {
     $params[':type'] = ucfirst($type);         
 }
 if ($q !== '') {
-    $sql .= " AND (i.item_name LIKE :q OR i.description LIKE :q OR i.custom_location LIKE :q OR l.location_name LIKE :q)";
-    $params[':q'] = '%' . $q . '%';
+    $sql .= item_search_clause($q, $params);
 }
 $sql .= " ORDER BY i.created_at DESC";
 
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
-
 $items = $stmt->fetchAll();
 
 $page_title = 'Feed';
@@ -115,8 +128,10 @@ require __DIR__ . '/includes/navbar.php';
     </section>
 
     <?php
-    $tabQuery = static function (string $t) use ($q, $categoryId, $locationId): string {
+    $tabUrl = static function (string $t) use ($q, $categoryId, $locationId): string {
         return '?' . http_build_query(array_filter([
+            'type'     => $t,
+            'q'        => $q,
             'category' => $categoryId ?: null,
             'location' => $locationId ?: null,
         ], static fn($v) => $v !== null && $v !== ''));
@@ -126,9 +141,9 @@ require __DIR__ . '/includes/navbar.php';
     <!-- Feed filters -->
     <form class="feed-filters" method="get">
         <div class="feed-tabs">
-            <a href="?type=all"<?= $type === 'all' ? ' aria-current="true"' : '' ?>>All</a>
-            <a href="?type=found"<?= $type === 'found' ? ' aria-current="true"' : '' ?>>Found</a>
-            <a href="?type=lost"<?= $type === 'lost' ? ' aria-current="true"' : '' ?>>Lost</a>
+            <a href="<?= e($tabUrl('all')) ?>"<?= $type === 'all' ? ' aria-current="true"' : '' ?>>All</a>
+            <a href="<?= e($tabUrl('found')) ?>"<?= $type === 'found' ? ' aria-current="true"' : '' ?>>Found</a>
+            <a href="<?= e($tabUrl('lost')) ?>"<?= $type === 'lost' ? ' aria-current="true"' : '' ?>>Lost</a>
             <input type="hidden" name="type" value="<?= e($type) ?>">
         </div>
         <input type="search" name="q" value="<?= e($q) ?>" maxlength="100" placeholder="Search items...">
@@ -184,13 +199,8 @@ require __DIR__ . '/includes/navbar.php';
                         </p>
                         
                         <p class="item-date">
-                            <i class="fa-solid fa-calendar"></i>
+                            <i class="fa-regular fa-calendar"></i>
                             <?= e($item['date']) ?>
-                        </p>
-
-                        <p class="item-reporter">
-                            <i class="fa-solid fa-user"></i>
-                            Reported by <?= $isOwn ? 'you' : e($item['reporter_name']) ?>
                         </p>
                     </div>
                     

@@ -55,8 +55,7 @@ if (reportForm) {
     if (hasDialog) {
         openConfirm.addEventListener('click', function (event) {
             event.preventDefault();
-            if (reportForm.reportValidity()) {
-                // "lost" or "found" in "submit this ___ item report?"
+            if (validateReportForm(reportForm)) {
                 var typeField = reportForm.elements['item_type'];
                 var typeValue = typeField ? String(typeField.value).toLowerCase() : '';
 
@@ -84,7 +83,7 @@ if (reportForm) {
         if (hasDialog) {
             if (!confirmed) {
                 event.preventDefault();
-                if (reportForm.reportValidity() && !confirmDialog.open) {
+                if (validateReportForm(reportForm) && !confirmDialog.open) {
                     confirmDialog.showModal();
                 }
                 return;
@@ -273,3 +272,73 @@ if (locationSelect && customLocationInput) {
     locationSelect.addEventListener('change', syncCustomLocation);
     syncCustomLocation();
 }
+
+// Input validation for report form
+function setFieldError(input, message) {
+    var field = input.closest('.field');
+    if (!field) return;
+
+    field.querySelectorAll('.form-error.js-error').forEach(function (el) {
+        if (el.dataset.for === input.id) el.remove();
+    });
+
+    if (message) {
+        var span = document.createElement('span');
+        span.className = 'form-error js-error';
+        span.dataset.for = input.id;
+        span.textContent = message;
+        input.insertAdjacentElement('afterend', span); 
+    }
+}
+
+function validateReportForm(form) {
+    var firstInvalid = null;
+    function check(id, message) {
+        var input = form.querySelector('#' + id);
+        if (!input) return;
+        setFieldError(input, message);
+        if (message && !firstInvalid) firstInvalid = input;
+    }
+
+    var f = form.elements;
+    var today = new Date().toISOString().slice(0, 10);
+    var locOpt = f['location_id'].options[f['location_id'].selectedIndex];
+    var isOther = locOpt && locOpt.dataset.other === '1';
+
+    check('item_name', f['item_name'].value.trim() === ''
+        ? 'Item name is required (max 100 characters).' : '');
+    check('category_id', f['category_id'].value === '' ? 'Choose a category.' : '');
+    check('location_id', f['location_id'].value === '' ? 'Choose a location.' : '');
+    check('custom_location', isOther && f['custom_location'].value.trim() === ''
+        ? 'Please specify the location when you choose "Other".' : '');
+    check('event_date', f['event_date'].value === '' ? 'Enter a valid date.'
+        : f['event_date'].value > today ? 'The date cannot be in the future.' : '');
+    check('description', f['description'].value.trim() === ''
+        ? 'Description is required (max 1000 characters).' : '');
+
+    if (firstInvalid) firstInvalid.focus();
+    return !firstInvalid;
+}
+
+if (reportForm) {
+    reportForm.addEventListener('input', function (e) {
+        setFieldError(e.target, '');
+    });
+    reportForm.addEventListener('change', function (e) {
+        setFieldError(e.target, '');
+    });
+}
+
+// Feed tabs: keep the typed search text when switching All/Found/Lost
+document.querySelectorAll('.feed-tabs a').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+        var form = a.closest('form');
+        if (!form) return;
+        e.preventDefault();
+        var url = new URL(a.href, window.location.href);
+        var q = form.elements['q'];
+        if (q && q.value.trim() !== '') url.searchParams.set('q', q.value.trim());
+        else url.searchParams.delete('q');
+        window.location.href = url.toString();
+    });
+});

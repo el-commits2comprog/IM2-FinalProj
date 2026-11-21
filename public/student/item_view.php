@@ -1,5 +1,5 @@
 <?php
-// [M2] Item Details Modal 
+// [M2] Item Details Modal reused by Feed and My Reports
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../app/auth/guard.php';

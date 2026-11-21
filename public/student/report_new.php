@@ -55,14 +55,6 @@ if (empty($_SESSION['csrf'])) {
     $_SESSION['csrf'] = bin2hex(random_bytes(16));
 }
 
-const MAX_PHOTO_BYTES = 2 * 1024 * 1024; //2 MB
-const PHOTO_TYPES = [
-    'image/jpeg' => 'jpg',
-    'image/png'  => 'png',
-    'image/webp' => 'webp',
-];
-
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach ($old as $key => $_) {
         $old[$key] = trim((string)($_POST[$key] ?? ''));
@@ -71,63 +63,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!hash_equals($_SESSION['csrf'], (string)($_POST['csrf'] ?? ''))) {
         $errors['form'] = 'Your session expired. Please try again.';
     }
-    if (!in_array($old['item_type'], ['Lost', 'Found'], true)) {
-        $errors['item_type'] = 'Choose Lost or Found.';
-    }
-    if ($old['item_name'] === '' || mb_strlen($old['item_name']) > 100) {
-        $errors['item_name'] = 'Item name is required (max 100 characters).';
-    }
-    if (!in_array((int)$old['category_id'], ($categoryIds), true)) {
-        $errors['category_id'] = 'Choose a category.';
-    }
 
-    $locationId = (int)$old['location_id'];
-    if (!in_array($locationId, $locationIds, true)) {
-        $errors['location_id'] = 'Choose a location.';
-    }
+    $errors += validate_item_report($old, $categories, $locations);
 
-    $customLocation = preg_replace('/\s+/', ' ', $old['custom_location']);
-    if (mb_strlen($customLocation) > 100) {
-        $errors['custom_location'] = 'Specific location must be 100 characters or fewer.';
+    $photo = validate_item_photo($_FILES['photo'] ?? null);
+    if ($photo['error'] !== null) {
+        $errors['photo'] = $photo['error'];
     }
-    if ($customLocation === '') {
-        $customLocation = null; 
-    }
+    $photoExt = $photo['ext'];
+    $photoTmp = $photo['tmp'];
 
-    $locationError = validate_custom_location($locations, $old);
-    if ($locationError !== null) {
-        $errors['custom_location'] = $locationError;
-    }
-
-    $date = DateTime::createFromFormat('Y-m-d', $old['event_date']);
-    if (!$date || $date->format('Y-m-d') !== $old['event_date']) {
-        $errors['event_date'] = 'Enter a valid date.';
-    } elseif ($old['event_date'] > date('Y-m-d')) {
-        $errors['event_date'] = 'The date cannot be in the future.';
-    }
-    if ($old['description'] === '' || mb_strlen($old['description']) > 1000) {
-        $errors['description'] = 'Description is required (max 1000 characters).';
-    }
-
-    $photoExt = null;
-    $photoTmp = null;
-    $file = $_FILES['photo'] ?? null;
-
-    if ($file && $file['error'] !== UPLOAD_ERR_NO_FILE) {
-        if ($file['error'] !== UPLOAD_ERR_OK) {
-            $errors['photo'] = 'The photo could not be uploaded. Try a smaller file.';
-        } elseif ($file['size'] > MAX_PHOTO_BYTES) {
-            $errors['photo'] = 'The photo must be 2 MB or smaller.';
-        } else {
-            $mime = (new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
-            if (!isset(PHOTO_TYPES[$mime])) {
-                $errors['photo'] = 'Only JPG, PNG, or WebP photos are allowed.';
-            } else {
-                $photoExt = PHOTO_TYPES[$mime];
-                $photoTmp = $file['tmp_name'];
-            }
-        }
-    }
+    $locationId     = (int)$old['location_id'];
+    $customLocation = normalize_custom_location($old['custom_location']);
 
     if (!$errors) {
         $photoPath = null;
@@ -300,8 +247,8 @@ require __DIR__ . '/../includes/navbar.php';
                 <h2>Submit Report</h2>
                 <p>Are you sure you want to submit this <span id="confirm-type">item</span> item report?</p>
 
-                <div class="confirm-actions">
-                    <button type="submit" value="cancel" class="btn">Cancel</button>
+                <div class="confirm-submit">
+                    <button type="submit" value="cancel" class="btn btn-secondary">Cancel</button>
                     <button type="button" id="confirm-submit" class="btn btn-primary">
                         Submit
                     </button>
