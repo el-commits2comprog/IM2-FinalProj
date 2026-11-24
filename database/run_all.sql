@@ -10,11 +10,10 @@
 
 SOURCE 00_create_database.sql;
 SOURCE 01_users.sql;
-
--- SOURCE 02_reference.sql;
--- SOURCE 03_items.sql;
--- SOURCE 04_claims.sql;
--- SOURCE 05_matches_transactions.sql;
--- SOURCE 06_view.sql;
--- SOURCE 07_procedure.sql;
--- SOURCE 08_trigger.sql;
+SOURCE 02_reference.sql;
+SOURCE 03_items.sql;
+SOURCE 04_claims.sql;
+SOURCE 05_matches_transactions.sql;
+SOURCE 06_view.sql;
+SOURCE 07_procedure.sql;
+SOURCE 08_trigger.sql;
