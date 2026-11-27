@@ -620,6 +620,60 @@ p.form-error {
     text-decoration: underline;
 }
 
+/* Possible matches row */
+.matches-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    margin-top: .4rem;
+    padding: .2rem .65rem .2rem .25rem;
+    border: 1px solid #f0c36a;
+    border-radius: 999px;
+    background: #fff7e0;
+    color: #7a5200;
+    font: inherit;
+    font-size: .8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.matches-pill:hover,
+.matches-pill:focus-visible {
+    background: #ffedb8;
+}
+
+.matches-pill-count {
+    display: inline-grid;
+    place-items: center;
+    min-width: 1.35rem;
+    height: 1.35rem;
+    padding: 0 .3rem;
+    border-radius: 999px;
+    background: #f0a500;
+    color: #fff;
+    font-size: .75rem;
+}
+
+.match-list {
+    display: grid;
+    gap: .75rem;
+    margin: 1rem 0;
+    max-height: 65vh;
+    overflow-y: auto;
+}
+
+.match-detail-card {
+    padding: 1rem;
+    border: 1px solid #e3e6ea;
+    border-radius: 10px;
+    background: #fff;
+}
+
+.match-notice {
+    padding-top: .75rem;
+    border-top: 1px solid #e3e6ea;
+}
+
 /* small screens */
 
 @media (max-width: 700px) {

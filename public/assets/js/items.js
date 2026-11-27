@@ -342,3 +342,44 @@ document.querySelectorAll('.feed-tabs a').forEach(function (a) {
         window.location.href = url.toString();
     });
 });
+
+//possible matches modal
+
+document.addEventListener('DOMContentLoaded', function () {
+    var modal = document.getElementById('matchModal');
+    var modalBody = document.getElementById('matchModalBody');
+    var closeButton = document.getElementById('closeMatchModal');
+
+    document.querySelectorAll('.view-matches-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            var template = document.getElementById(this.dataset.matchId);
+
+            if (!template) return;
+
+            modalBody.replaceChildren(
+                template.content.cloneNode(true)
+            );
+
+            modal.hidden = false;
+        });
+    });
+
+    function closeModal() {
+        modal.hidden = true;
+        modalBody.replaceChildren();
+    }
+
+    closeButton.addEventListener('click', closeModal);
+
+    modal.addEventListener('click', function (event) {
+        if (event.target === modal) {
+            closeModal();
+        }
+    });
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && !modal.hidden) {
+            closeModal();
+        }
+    });
+});

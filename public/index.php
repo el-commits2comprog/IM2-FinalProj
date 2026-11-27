@@ -83,7 +83,15 @@ $sql = "
     JOIN categories c ON c.category_id = i.category_id
     JOIN locations  l ON l.location_id = i.location_id
     LEFT JOIN users u ON u.user_id = i.user_id
-    WHERE i.status = 'Approved'                                                                                    
+    WHERE i.status = 'Approved'
+      AND NOT EXISTS (
+          SELECT 1
+          FROM matches m
+          JOIN items fi ON fi.item_id = m.found_item_id
+          WHERE m.is_confirmed = 1
+            AND fi.status = 'Returned'
+            AND (m.lost_item_id = i.item_id OR m.found_item_id = i.item_id)
+      )                                                                                
 ";
 $params = [];
 
@@ -122,7 +130,7 @@ require __DIR__ . '/includes/navbar.php';
     <section class="card page-head">
         <div>
             <h1>Welcome, <?= e($user['full_name'] ?? '') ?></h1>
-            <p>Browse items reported on campus.</p>
+            <p>Browse lost and found items reported on campus.</p>
         </div>
         <a class="btn btn-primary" href="<?= e(url('student/report_new.php')) ?>">Report an item</a>
     </section>

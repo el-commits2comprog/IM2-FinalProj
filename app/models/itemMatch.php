@@ -49,6 +49,50 @@ function item_match_item_select(): string
             JOIN locations l ON i.location_id = l.location_id";
 }
 
+function item_match_student_candidates(int $lostItemId): array
+{
+    $select = str_replace(
+        'SELECT i.item_id,',
+        'SELECT m.is_confirmed AS match_confirmed, i.item_id,',
+        item_match_item_select()
+    );
+
+    $sql = $select . '
+        INNER JOIN matches m ON m.found_item_id = i.item_id
+        WHERE m.lost_item_id = :lost_id
+          AND i.item_type = :item_type
+          AND (m.is_confirmed = 1 OR i.status = :status)
+        ORDER BY m.is_confirmed DESC, m.created_at DESC
+    ';
+
+    $stmt = db()->prepare($sql);
+    $stmt->execute([
+        'lost_id'   => $lostItemId,
+        'item_type' => ITEM_TYPE_FOUND,
+        'status'    => ITEM_STATUS_APPROVED,
+    ]);
+
+    $results = [];
+
+    foreach ($stmt->fetchAll() as $row) {
+        $confirmed = (int) $row['match_confirmed'] === 1;
+
+        $results[] = [
+            'item'      => $row,
+            'confirmed' => $confirmed,
+            'label'     => $confirmed
+                ? 'Confirmed by an administrator.'
+                : 'Suggested match awaiting administrator confirmation.',
+        ];
+    }
+
+    if ($results && $results[0]['confirmed']) {
+        $results = array_values(array_filter($results, static fn (array $m): bool => $m['confirmed']));
+    }
+
+    return $results;
+}
+
 /**
  * Find one item (any status) with the columns matching needs.
  *
